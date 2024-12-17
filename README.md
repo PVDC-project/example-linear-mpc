@@ -1,5 +1,5 @@
-# Linear MPC using YALMIP
-This example shows how to formulate a linear MPC problem using [YALMIP](https://yalmip.github.io/).
+# Linear MPC in MATLAB/Simulink using YALMIP
+This example shows how to formulate a linear MPC problem using [YALMIP](https://yalmip.github.io/). The simulation can be carried out in either MATLAB or Simulink.
 
 A linear MPC formulation usually has a quadratic objective, linear system dynamics and simple bounds on states or inputs.
 
