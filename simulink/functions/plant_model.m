@@ -1,33 +1,32 @@
-function [A,B,C,D] = plant_model()
-% form: x+ = A*x + B*u
-% in this case, a quadcopter 
-% more information: https://github.com/orgs/osqp/discussions/558
-A = [ 1       0       0   0   0   0   0.1     0       0    0       0       0;
-      0       1       0   0   0   0   0       0.1     0    0       0       0;
-      0       0       1   0   0   0   0       0       0.1  0       0       0;
-      0.0488  0       0   1   0   0   0.0016  0       0    0.0992  0       0;
-      0      -0.0488  0   0   1   0   0      -0.0016  0    0       0.0992  0;
-      0       0       0   0   0   1   0       0       0    0       0       0.0992;
-      0       0       0   0   0   0   1       0       0    0       0       0;
-      0       0       0   0   0   0   0       1       0    0       0       0;
-      0       0       0   0   0   0   0       0       1    0       0       0;
-      0.9734  0       0   0   0   0   0.0488  0       0    0.9846  0       0;
-      0      -0.9734  0   0   0   0   0      -0.0488  0    0       0.9846  0;
-      0       0       0   0   0   0   0       0       0    0       0       0.9846];
+function [A,B,C,D] = plant_model(Ts)
+% DC motor parameters
+Ra = 2.19;      % [Ohm] armature resistance
+La = 4.4e-3;    % [H] armature inductance
+Cm = 1.5872;    % [Nm/A] electromechanical constant
+Ce = Cm;        % [Vs/rad] back-EMF constant
+J = 0.0345;     % [kgm^2] rotor moment of inertia
 
-B = [ 0      -0.0726  0       0.0726;
-     -0.0726  0       0.0726  0;
-     -0.0152  0.0152 -0.0152  0.0152;
-      0      -0.0006 -0.0000  0.0006;
-      0.0006  0      -0.0006  0;
-      0.0106  0.0106  0.0106  0.0106;
-      0      -1.4512  0       1.4512;
-     -1.4512  0       1.4512  0;
-     -0.3049  0.3049 -0.3049  0.3049;
-      0      -0.0236  0       0.0236;
-      0.0236  0      -0.0236  0;
-      0.2107  0.2107  0.2107  0.2107];
+% continuous-time LTI system
+% form: dx/dt = Ac*x + Bc*u
+% x = [ia w]', u = ua, y = w
+% (ia - armature current)
+% (w - motor speed)
+% (ua - armature voltage)
+Ac = [-Ra/La -Ce/La;
+       Cm/J     0];
+Bc = [1/La
+       0];
+C = [0 1];
+D = 0;
+sysc = ss(Ac,Bc,C,D);
 
-C = eye(size(A,1));
-D = zeros(size(B));
+if Ts > 0
+    % discrete-time LTI system
+    % form: x+ = A*x + B*u
+    sysd = c2d(sysc,Ts);    % discretization using ZOH
+    A = sysd.A; B = sysd.B; % discrete-time matrices (C and D stay the same)
+else
+    % output continuous-time matrices
+    A = Ac; B = Bc;
+end
 end

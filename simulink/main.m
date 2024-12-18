@@ -2,20 +2,29 @@
 clear;clc;close all;
 addpath('functions')
 
-% define the system dynamics and number of inputs
-[A,B,C,D] = plant_model();  % discrete-time LTI system
-nu = size(B,2);
-
 % define the controller settings
-Ts = 0.1;   % [s] sampling time
+Ts = 0.01;  % [s] sampling time
 N = 10;     % [-] prediction horizon
 
-% simulation
-% initial and reference states
-x0 = zeros(12,1);  % start at rest
-x_ref = [0; 0; 1; 0; 0; 0; 0; 0; 0; 0; 0; 0];  % lift the quad 1 m
+% define the system dynamics and number of inputs
+[A,B,C,D] = plant_model(0);  % continuous-time LTI system
+[nx,nu] = size(B);
 
-Tsim = 2;  % [s] simulation time
+% simulation
+x0 = zeros(nx,1);  % start at rest
+Tsim = 1;  % [s] simulation time
+
+% create a reference signal
+ref_amplitude = 1;
+switching_times = Tsim/4 * (1:4);  % switch four times during the simulation
+t = 0:Ts:Tsim;
+x_ref = ref_amplitude * ones(size(t));
+for ii = 1:numel(switching_times)-1
+    start_p = find(t > switching_times(ii), 1, 'first');
+    end_p = find(t <= switching_times(ii+1),1,'last');
+    x_ref(start_p:end_p) = x_ref(start_p:end_p) * (-1)^ii;
+end
+x_ref_sim = [t' x_ref'];  % format needed for Simulink
 
 simout = sim('simulink_yalmip.slx');
 
@@ -23,26 +32,27 @@ simout = sim('simulink_yalmip.slx');
 figure
 
 % plot the state(s) of interest
-x_log = squeeze(simout.x_log);
 subplot(2,1,1)
-plot(x_log(3,:))  % third state should follow the reference
+x_log = squeeze(simout.x_log);
+plot(t,C*x_log)  % plot the output
 hold on
-yline(x_ref(3),'r--')  % plot the reference
-ylabel('x3')
+plot(t,x_ref,'r--')  % plot the reference
+ylabel('$\omega$ [rad/s]','Interpreter','latex')
+grid on
+legend({'$\omega$','$\omega_{ref}$'},'Location','northeast','Interpreter','latex')
 ylim padded
 xlim tight
+title('Simulation results')
 
 % plot the control inputs
-u_log = squeeze(simout.u_log);
-u0 = 10.5916;  % hovering input
-umin = [9.6; 9.6; 9.6; 9.6] - u0;
-umax = [13; 13; 13; 13] - u0;
 subplot(2,1,2)
-stairs(u_log')
+u_log = squeeze(simout.u_log);
+stairs(t,u_log)
 hold on
-yline([umin(1) umax(1)],'r--')  % plot the input limits
-legend({'u1','u2','u3','u4'})
-ylabel('u')
-xlabel('k')
+yline([-6 6],'r--')  % plot the input limits
+ylabel('$u_a$ [V]','Interpreter','latex')
+xlabel('$t$ [s]','Interpreter','latex')
+grid on
+legend({'$u_a$','$u_{nom}$'},'Interpreter','latex')
 ylim padded
 xlim tight

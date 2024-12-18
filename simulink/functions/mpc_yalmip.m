@@ -4,8 +4,8 @@ classdef mpc_yalmip < matlab.System
     % Public, tunable properties 
     % (can be set through the mask, default values are given here)
     properties
-        Ts = 1e-3   % sampling time [s]
-        nu = 4      % number of control inputs
+        Ts = 0.01   % sampling time [s]
+        nu = 1      % number of control inputs
         N = 10      % controller prediction horizon
     end
     
@@ -20,12 +20,13 @@ classdef mpc_yalmip < matlab.System
         % One-time setup of the block
         function setupImpl(obj)
             % create the controller
-            obj.controller = mpc_setup(obj.N);
+            obj.controller = mpc_setup(obj.N,obj.Ts);
         end
         
         % Loop function, runs in every simulation step
         function [u_opt,exitflag,solvetime] = stepImpl(obj,x_current,x_ref)
             % perform an MPC step
+            x_ref = [0; x_ref];  % add a zero as the current reference
             [u_opt,exitflag,~,~,~,info] = obj.controller({x_current, x_ref});
             solvetime = info.solvertime;
         end

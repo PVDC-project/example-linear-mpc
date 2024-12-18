@@ -1,28 +1,28 @@
-function controller = mpc_setup(N)
+function controller = mpc_setup(N,Ts)
 % This function creates an MPC object using YALMIP 
 % input: prediction horizon
 
 % ------------- Discrete-time model --------------
 % form: x+ = A*x + B*u
-[A,B] = plant_model();
+[A,B] = plant_model(Ts);
 [nx, nu] = size(B);  % system dimensions
 
 % ------------- MPC parameters -------------------
 % details: https://osqp.org/docs/examples/mpc.html
 
 % objective function matrices
-Q = diag([0 0 10 10 10 10 0 0 0 5 5 5]);
-R = 0.1*eye(4);
-[~,QN] = dlqr(A,B,Q,R);  % LQR solution as the terminal cost
+Q = diag([0 1e3]);      % we only care about tracking the speed in this case
+R = 1;                  % input cost should be positive
+[~,QN] = dlqr(A,B,Q,R); % LQR solution as the terminal cost
 
 % input constraints
-u0 = 10.5916;  % hovering input
-umin = [9.6; 9.6; 9.6; 9.6] - u0;
-umax = [13; 13; 13; 13] - u0;
+Unom = 6;  % [V] nominal voltage
+umin = -Unom;
+umax = Unom;
 
-% state constraints (only on some states)
-xmin = [-pi/6; -pi/6; -Inf; -Inf; -Inf; -1; -Inf(6,1)];
-xmax = [ pi/6;  pi/6;  Inf;  Inf;  Inf; Inf; Inf(6,1)];
+% state constraints (optional)
+xmin = [-10; -10];
+xmax = [10; 10];
 
 % ------- Optimization problem definition --------
 u = sdpvar(nu,N);
